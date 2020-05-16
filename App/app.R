@@ -6,6 +6,7 @@
 #
 #    http://shiny.rstudio.com/
 #
+library(rsconnect)   
 library(base64enc)
 library(shiny)
 library(shiny)
@@ -27,10 +28,11 @@ library(ROAuth)
 library(plotly)
 library(glue)
 library(twitteR)
+library(rvest)
 #value boxes
 
 ui <- dashboardPage(
-    dashboardHeader(title = "Corona"),
+    dashboardHeader(title = "NLP: Sentiment Analysis"),
     dashboardSidebar(
         sidebarPanel(style = "background-color: #1b2327",
                      numericInput("num_tweets_to_download",
@@ -96,7 +98,6 @@ ui <- dashboardPage(
                          shinydashboard::valueBoxOutput("value6")),
                      fluidRow(reactableOutput("tweet_table")))))
     )
-    
 
 
 
@@ -162,7 +163,7 @@ server <- function(input, output) {
         
         
         shinydashboard::valueBox(paste(n, "%"), subtitle = "Positive Tweets", 
-                                 icon = icon("stats", lib ="glyphicon" ), color = "light-blue")
+                                 icon = icon("smile", lib ="font-awesome" ), color = "aqua")
     })
     
     output$value2 <- shinydashboard::renderValueBox({
@@ -184,7 +185,7 @@ server <- function(input, output) {
         
         
         shinydashboard::valueBox(paste(n, "%"), subtitle = "Negative Tweets", 
-                                 icon = icon("stats", lib ="glyphicon" ), color = "green")
+                                 icon = icon("angry", lib ="font-awesome" ), color = "green")
     })
     output$top10 <- renderPlot({
         topwords <-  dataInput()[,1:16] %>% 
@@ -215,7 +216,7 @@ server <- function(input, output) {
         
         
         shinydashboard::valueBox(tweets_count, subtitle = "Total Tweets", 
-                                 icon = icon("stats", lib ="glyphicon" ), color = "orange")
+                                 icon = icon("chart-bar", lib ="font-awesome" ), color = "orange")
     })
     
     output$bing <- renderPlot({
@@ -301,8 +302,8 @@ server <- function(input, output) {
             html_node("#maincounter-wrap:nth-child(7) span") %>% 
             html_text()
         
-        shinydashboard::valueBox(paste(global), subtitle = "Global Cases", 
-                                 icon = icon("stats", lib ="glyphicon" ), color = "light-blue")
+        shinydashboard::valueBox(paste(global), subtitle = "Total Number of Case", 
+                                 icon = icon("chart-line", lib ="font-awesome" ), color = "light-blue")
     })
     
     #build value box for number of deaths
@@ -313,8 +314,8 @@ server <- function(input, output) {
     deaths <- read_html(x) %>% 
         html_node("#maincounter-wrap:nth-child(9) span") %>% 
         html_text()
-        shinydashboard::valueBox(deaths, subtitle = "Global Deaths",
-                                 icon = icon("stats", lib = "glyphicon"),
+        shinydashboard::valueBox(deaths, subtitle = "Total Number of Deaths",
+                                 icon = icon("tombstone-alt", lib = "font-awesome"),
                                  color = "orange")
     })
     
@@ -328,7 +329,7 @@ server <- function(input, output) {
             html_node("#maincounter-wrap+ #maincounter-wrap span") %>% 
             html_text()
         
-        shinydashboard::valueBox(recovery, subtitle = "Global Deaths",
+        shinydashboard::valueBox(recovery, subtitle = "Total Number of Recoveries",
                                  icon = icon("stats", lib = "glyphicon"),
                                  color = "blue")
     })
@@ -398,3 +399,10 @@ server <- function(input, output) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+
+
+setAccountInfo(name='simmie',
+                          token='46571E4B0FDF32F4A7B9A2E0478A71FB',
+                          secret='J5r2LZQw572oW9imfMA9m1Tdz6xU3P0GP2iM5SmC')
+
+deployApp(appName = "NLP_new")
