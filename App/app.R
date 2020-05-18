@@ -121,13 +121,17 @@ ui <- dashboardPage(
                        valueBoxOutput("value8"),
                        valueBoxOutput("value9")),
                      fluidRow(reactableOutput("tweet_table"))),
-           tabPanel(title = "About",
+           tabPanel(title = "About App",
                     tags$div( id = 'ci_intel_by_hs_hstable' ,
                               fluidRow( h3( style="color:#cc4c02",HTML("<b>Twitter Sentiment Analysis Shiny App</b>")),
                                         h5(HTML("Using Twittter API, this Dashboard collects recent tweets.
-                                          The Number of Tweets and preferred </br> hashtag can be used to retrieve tweets with 500 and covid
-                                            being the default values.")),
-                                        h5(HTML("The <b>Tweet table</b> contains the details
+                                          The Number of Tweets and preferred hashtag can be used to retrieve tweets with a range between
+                                          500 & 18000 tweets at a time. There are also a range of preferred hashtags that can be used to
+                                          guide the search. The tweet table presented using reactable, contains options to search either 
+                                                a specific column or the entire table. </br>
+                                            The Sentiment Polarity Graph, shows the extreme positivity or negativity of all tweets collected. 
+                                                An interactive plot, that presents the guiding statement, tweet author and link to the page of twitter itself.
+                                                The <b>Tweet table</b> contains the details
                                                 of each tweet and <b>>></b> is the tweet link")))
                     ))
     )))
@@ -387,7 +391,7 @@ server <- function(input, output) {
             html_node("#maincounter-wrap:nth-child(7) span") %>% 
             html_text()
         
-       valueBox(paste(global), subtitle = "Total Number Cases Globally", 
+       valueBox(paste(global), subtitle = "Total Number of Global Cases", 
                                  icon = icon("chart-line", lib ="font-awesome" ), color = "light-blue")
     })
     
