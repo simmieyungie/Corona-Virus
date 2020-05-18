@@ -5,21 +5,16 @@
 # Find out more about building applications with Shiny here:
 #
 #    http://shiny.rstudio.com/
-#
+
+library(tm)
 library(rsconnect)   
 library(base64enc)
 library(shiny)
-library(shiny)
 library(rtweet)
-library(dplyr)
-library(glue)
 library(reactable)
-library(purrr)
-library(shiny)
 library(scales)
 library(reshape2)
 library(tidyverse)
-library(wordcloud)
 library(tidytext)
 library(RColorBrewer)
 library(shinydashboard)
@@ -29,44 +24,60 @@ library(plotly)
 library(glue)
 library(twitteR)
 library(rvest)
+library(wordcloud2)
+library(textdata)
+
 #value boxes
 
+
 ui <- dashboardPage(
-    dashboardHeader(title = "NLP: Sentiment Analysis"),
+    dashboardHeader(title = h4(HTML("Twitter Covid'19 <br/>Sentiment Analysis")), titleWidth = 230,
+                    disable = FALSE),
     dashboardSidebar(
-        sidebarPanel(style = "background-color: #1b2327",
-                     numericInput("num_tweets_to_download",
-                                  "Number of tweets to download:",
-                                  min = 100,
+        sidebarPanel(
+                     h5(style="color:#cc4c02", sliderInput("Tweets_to_Download",
+                                  "No of Tweets to Download:",
+                                  min = 500,
                                   max = 18000,
                                   value = 500,
-                                  step = 100), # <- Don't forget comma here
-                     textInput("hashtag_to_search",
-                               "Hashtag to search:",
-                               value = "#covid")
-                     , width = 0.3)),
-    
+                                  step = 500)),
+                    h6(style = "color:#006d2c", selectInput("Input_Hashtag", "Hashtag to search:", c("#corona",
+                                                                          "#covid",
+                                                                          "#covid19",
+                                                                          "#coronavirus")))
+                     , width = 0.3)
+      ),
+
     
     dashboardBody(
-        tags$head(
-            tags$style(HTML("
-          .main-sidebar {
+      # Also add some custom CSS to make the title background area the same
+      # color as the rest of the header.
+      tags$head(tags$style(HTML("
+        .skin-blue .main-header .logo {
+          background-color: #3c8dbc;
+        }
+        .skin-blue .main-header .logo:hover {
+          background-color: #3c8dbc;
+        }
+        .main-sidebar {
             background-color: skinblue !important;
           }
+  
+          
         "))),
         tabsetPanel(
-            tabPanel(title = "First",
+            tabPanel(title = "Sentiment Analysis",
         fluidRow(
-                shinydashboard::valueBoxOutput("value1"),
-                shinydashboard::valueBoxOutput("value2"),
-                shinydashboard::valueBoxOutput("value3")),            
+                valueBoxOutput("value1"),
+                valueBoxOutput("value2"),
+                valueBoxOutput("value3")),            
         fluidRow(  
                 box(
-                    title = "WordCloud of Words"
+                    title = "WordCloud"
                     ,status = "primary"
                     ,solidHeader = TRUE 
-                    ,collapsible = TRUE 
-                    ,plotOutput("wordcloud", height = "300px")
+                    ,collapsible = TRUE
+                    ,wordcloud2Output("wordcloud", height = "300px")
                 ),
                 box(
                     title = "Top 10 words"
@@ -84,20 +95,42 @@ ui <- dashboardPage(
                     plotOutput("bing", height = "300px")
                 ),
                 box(
-                    title = "Sentiment Polarity",
+                    title = "NRC Sentiments",
                     status = "primary",
                     solidHeader = TRUE,
                     collapsible = TRUE,
-                    plotlyOutput("Polarity", height = "300px")
+                    plotOutput("NRC", height = "300px")
                 )),
+          fluidRow(
+            box(
+              title = "Sentiment Polarity",
+              width = 12,
+              solidHeader = TRUE,
+              collapsible = TRUE,
+              plotlyOutput("Polarity", height = "300px")
+              
+            )),
             ),
-           tabPanel(title = "New",
+           tabPanel(title = "Tweet Table",
                      fluidRow(
-                         shinydashboard::valueBoxOutput("value4"),
-                         shinydashboard::valueBoxOutput("value5"),
-                         shinydashboard::valueBoxOutput("value6")),
-                     fluidRow(reactableOutput("tweet_table")))))
-    )
+                         valueBoxOutput("value4"),
+                         valueBoxOutput("value5"),
+                         valueBoxOutput("value6")),
+                     fluidRow(
+                       valueBoxOutput("value7"),
+                       valueBoxOutput("value8"),
+                       valueBoxOutput("value9")),
+                     fluidRow(reactableOutput("tweet_table"))),
+           tabPanel(title = "About",
+                    tags$div( id = 'ci_intel_by_hs_hstable' ,
+                              fluidRow( h3( style="color:#cc4c02",HTML("<b>Twitter Sentiment Analysis Shiny App</b>")),
+                                        h5(HTML("Using Twittter API, this Dashboard collects recent tweets.
+                                          The Number of Tweets and preferred </br> hashtag can be used to retrieve tweets with 500 and covid
+                                            being the default values.")),
+                                        h5(HTML("The <b>Tweet table</b> contains the details
+                                                of each tweet and <b>>></b> is the tweet link")))
+                    ))
+    )))
 
 
 
@@ -119,14 +152,14 @@ server <- function(input, output) {
     setup_twitter_oauth(consumerKey,consumerSecret,accessToken,accessTokenSecret)
     
     dataInput <- reactive({
-       data <- searchTwitter(input$hashtag_to_search, n = input$num_tweets_to_download, 
+       data <- searchTwitter(input$Input_Hashtag, n = input$Tweets_to_Download, 
                        resultType = "recent", lang = "en")
         
          twListToDF(data)
         })
     
     #Create reactive word cloud
-    output$wordcloud <- renderPlot({
+    output$wordcloud <- renderWordcloud2({
         ##Word clouds for all tweets
         table_1 <- dataInput() %>% 
             mutate(rowmumber = row_number()) %>% 
@@ -134,18 +167,62 @@ server <- function(input, output) {
             mutate(text = gsub("rt", "", text)) %>% 
             mutate(text = gsub("https","", text)) %>% 
             mutate(text = gsub("t.co", "", text)) %>% 
+            mutate(text = removeNumbers(text)) %>% 
             mutate(text = gsub("coronoavirus", "coronavirus", text)) %>% 
             unnest_tokens(word, text) %>% 
             anti_join(stop_words) %>% 
             count(word, sort = T) 
-        wordcloud(table_1$word,freq = table_1$n, max.words = 100,
-                  min.freq=1,scale=c(3,.5), 
-                  random.order = FALSE,rot.per=.5,
-                  colors = brewer.pal(8, "Dark2"))
+        
+        wordcloud2a <- function (data, size = 1, minSize = 0, gridSize = 0, fontFamily = "Segoe UI", 
+                                 fontWeight = "bold", color = "random-dark", backgroundColor = "white", 
+                                 minRotation = -pi/4, maxRotation = pi/4, shuffle = TRUE, 
+                                 rotateRatio = 0.4, shape = "circle", ellipticity = 0.65, 
+                                 widgetsize = NULL, figPath = NULL, hoverFunction = NULL) 
+        {
+          if ("table" %in% class(data)) {
+            dataOut = data.frame(name = names(data), freq = as.vector(data))
+          }
+          else {
+            data = as.data.frame(data)
+            dataOut = data[, 1:2]
+            names(dataOut) = c("name", "freq")
+          }
+          if (!is.null(figPath)) {
+            if (!file.exists(figPath)) {
+              stop("cannot find fig in the figPath")
+            }
+            spPath = strsplit(figPath, "\\.")[[1]]
+            len = length(spPath)
+            figClass = spPath[len]
+            if (!figClass %in% c("jpeg", "jpg", "png", "bmp", "gif")) {
+              stop("file should be a jpeg, jpg, png, bmp or gif file!")
+            }
+            base64 = base64enc::base64encode(figPath)
+            base64 = paste0("data:image/", figClass, ";base64,", 
+                            base64)
+          }
+          else {
+            base64 = NULL
+          }
+          weightFactor = size * 180/max(dataOut$freq)
+          settings <- list(word = dataOut$name, freq = dataOut$freq, 
+                           fontFamily = fontFamily, fontWeight = fontWeight, color = color, 
+                           minSize = minSize, weightFactor = weightFactor, backgroundColor = backgroundColor, 
+                           gridSize = gridSize, minRotation = minRotation, maxRotation = maxRotation, 
+                           shuffle = shuffle, rotateRatio = rotateRatio, shape = shape, 
+                           ellipticity = ellipticity, figBase64 = base64, hover = htmlwidgets::JS(hoverFunction))
+          chart = htmlwidgets::createWidget("wordcloud2", settings, 
+                                            width = widgetsize[1], height = widgetsize[2], sizingPolicy = htmlwidgets::sizingPolicy(viewer.padding = 0, 
+                                                                                                                                    browser.padding = 0, browser.fill = TRUE))
+          chart
+        }
+        
+        wordcloud2a(table_1, size = 0.75, shape = "circle", ellipticity = 0.65)
     })
+
     #Build value box
-    output$value1 <- shinydashboard::renderValueBox({
-        n <- dataInput()[,1:16] %>% 
+    output$value1 <- renderValueBox({
+        n <- dataInput() %>% 
             mutate(text = iconv(text, from = "latin1", to = "ASCII")) %>% 
             mutate(text = tolower(text)) %>% 
             unnest_tokens(word, text) %>% 
@@ -162,11 +239,11 @@ server <- function(input, output) {
         n <- n[,2]
         
         
-        shinydashboard::valueBox(paste(n, "%"), subtitle = "Positive Tweets", 
+        valueBox(paste(n, "%"), subtitle = "Positive Tweets", 
                                  icon = icon("smile", lib ="font-awesome" ), color = "aqua")
     })
     
-    output$value2 <- shinydashboard::renderValueBox({
+    output$value2 <- renderValueBox({
         n <- dataInput()[,1:16] %>% 
             mutate(text = iconv(text, from = "latin1", to = "ASCII")) %>% 
             mutate(text = tolower(text)) %>% 
@@ -184,7 +261,7 @@ server <- function(input, output) {
         n <- n[,2]
         
         
-        shinydashboard::valueBox(paste(n, "%"), subtitle = "Negative Tweets", 
+        valueBox(paste(n, "%"), subtitle = "Negative Tweets", 
                                  icon = icon("angry", lib ="font-awesome" ), color = "green")
     })
     output$top10 <- renderPlot({
@@ -193,6 +270,9 @@ server <- function(input, output) {
             mutate(text = gsub("rt", "", text)) %>% 
             mutate(text = gsub("https","", text)) %>% 
             mutate(text = gsub("t.co", "", text)) %>% 
+            mutate(text = gsub("covid", "", text)) %>% 
+            mutate(text = removeNumbers(text)) %>% 
+            mutate(text = gsub("19", "", text)) %>% 
             mutate(text = gsub("ppl", "people", text)) %>% 
             mutate(text = gsub("coronoavirus", "coronavirus", text)) %>% 
             mutate(text = gsub("en", "", text)) %>% 
@@ -205,17 +285,20 @@ server <- function(input, output) {
         
         ggplot(topwords, aes(reorder(word, n), n, fill = word)) + #piped into ggplot
             geom_bar(stat = "identity", show.legend = F) + coord_flip() +
-            labs(x = "Word", y = "count", title = "Most words used (Top 10)")
+            labs(x = "Word", y = "count") + theme_minimal() +
+          theme(axis.title.x = element_text(face ="bold", size = 15),
+                axis.title.y = element_text(face = "bold", size = 15),
+                axis.text = element_text(face = "bold"))
     })
     
     
-    output$value3 <- shinydashboard::renderValueBox({
+    output$value3 <- renderValueBox({
         
-        tweets_count <- dataInput()[,1:16] %>% 
+        tweets_count <- dataInput() %>% 
             nrow()
         
         
-        shinydashboard::valueBox(tweets_count, subtitle = "Total Tweets", 
+        valueBox(tweets_count, subtitle = "Total Tweets", 
                                  icon = icon("chart-bar", lib ="font-awesome" ), color = "orange")
     })
     
@@ -232,11 +315,13 @@ server <- function(input, output) {
             ungroup() %>% 
             group_by(sentiment) %>% 
             top_n(10)
+            
         ggplot(pos_vs_neg, aes(reorder(word, n), n, fill = word)) +
             geom_col(show.legend = F) +
             facet_wrap(~sentiment, scales = "free_y") +
             coord_flip() + 
-            labs(y = "Count", x = "Words", main = "Positive vs Negative words")
+            labs(y = "Count", x = "Words") +
+            theme_bw()
         
         
     })
@@ -279,11 +364,11 @@ server <- function(input, output) {
                       geom_line(color= "black", alpha = 0.5) +
                       geom_smooth(method = "loess", span = 0.25, se = FALSE, color = "blue") +
                       geom_hline(aes(yintercept = mean(sentiment), color = "blue")) +
-                      geom_point(aes(text = text_formatted), color = "red") +
-                      geom_hline(aes(yintercept = median(sentiment) + 1.96*IQR(sentiment)), color = "red") +
-                      geom_hline(aes(yintercept = median(sentiment) - 1.96*IQR(sentiment)), color = "red") +
+                      geom_point(aes(text = text_formatted), color = "orange", shape = 5) +
+                      geom_hline(aes(yintercept = median(sentiment) + 1.96*IQR(sentiment)), color = "orange") +
+                      geom_hline(aes(yintercept = median(sentiment) - 1.96*IQR(sentiment)), color = "orange") +
                       theme_bw() +
-                      labs(title = "Sentiment Polarity", y = "sentiment score", x = "Twitter User"),
+                      labs(y = "sentiment score", x = "Twitter User"),
                   tooltip = "text") %>% 
             layout(
                 xaxis = list(
@@ -293,7 +378,7 @@ server <- function(input, output) {
     })
     
     #Build value box for total global infections
-    output$value4 <- shinydashboard::renderValueBox({
+    output$value4 <- renderValueBox({
         #Get the death rates
         x <- "https://www.worldometers.info/coronavirus/"
         
@@ -302,25 +387,25 @@ server <- function(input, output) {
             html_node("#maincounter-wrap:nth-child(7) span") %>% 
             html_text()
         
-        shinydashboard::valueBox(paste(global), subtitle = "Total Number of Case", 
+       valueBox(paste(global), subtitle = "Total Number Cases Globally", 
                                  icon = icon("chart-line", lib ="font-awesome" ), color = "light-blue")
     })
     
     #build value box for number of deaths
     #total deaths
-    output$value5 <- shinydashboard::renderValueBox({
+    output$value5 <- renderValueBox({
         x <- "https://www.worldometers.info/coronavirus/"
         
     deaths <- read_html(x) %>% 
         html_node("#maincounter-wrap:nth-child(9) span") %>% 
         html_text()
-        shinydashboard::valueBox(deaths, subtitle = "Total Number of Deaths",
-                                 icon = icon("tombstone-alt", lib = "font-awesome"),
-                                 color = "orange")
+        valueBox(deaths, subtitle = "Total Number of Deaths",
+                                 icon = icon("chart-bar", lib = "font-awesome"),
+                                 color = "black")
     })
     
     #Value box for total recoveries world wide
-    output$value6 <- shinydashboard::renderValueBox({
+    output$value6 <- renderValueBox({
         
         x <- "https://www.worldometers.info/coronavirus/"
         
@@ -329,9 +414,9 @@ server <- function(input, output) {
             html_node("#maincounter-wrap+ #maincounter-wrap span") %>% 
             html_text()
         
-        shinydashboard::valueBox(recovery, subtitle = "Total Number of Recoveries",
+        valueBox(recovery, subtitle = "Total Number of Recoveries",
                                  icon = icon("stats", lib = "glyphicon"),
-                                 color = "blue")
+                                 color = "aqua")
     })
     
     make_url_html <- function(url) {
@@ -342,7 +427,7 @@ server <- function(input, output) {
                 ""
             }
         } else {
-            paste0(purrr::map_chr(url, ~ paste0("<a title = '", .x, "' target = '_new' href = '", .x, "'>", .x, "</a>", collapse = ", ")), collapse = ", ")
+            paste0(map_chr(url, ~ paste0("<a title = '", .x, "' target = '_new' href = '", .x, "'>", .x, "</a>", collapse = ", ")), collapse = ", ")
         }
     }
     
@@ -358,14 +443,14 @@ server <- function(input, output) {
                     mutate(status_id = user_id) %>% 
             select(user_id, created_at, status_id, screen_name, text, favorite_count, retweet_count, urls_expanded_url) %>%
             mutate(
-                Tweet = glue::glue("{text} <a href='https://twitter.com/{screen_name}/status/{status_id}'>>> </a>"),
-                URLs = purrr::map_chr(urls_expanded_url, make_url_html)
+                Tweet = glue("{text} <a href='https://twitter.com/{screen_name}/status/{status_id}'>>> </a>"),
+                URLs = map_chr(urls_expanded_url, make_url_html)
             )%>%
             select(DateTime = created_at, User = screen_name, Tweet, Likes = favorite_count, RTs = retweet_count, URLs)
     })
     
     output$tweet_table <- renderReactable({
-        reactable::reactable(tweet_table_data(), 
+          reactable(tweet_table_data(), 
                              filterable = TRUE, searchable = TRUE, bordered = TRUE, striped = TRUE, highlight = TRUE,
                              showSortable = TRUE, defaultSortOrder = "desc", defaultPageSize = 10, showPageSizeOptions = TRUE, pageSizeOptions = c(10, 50, 75, 100, 200), 
                              columns = list(
@@ -380,29 +465,75 @@ server <- function(input, output) {
     })
     #Build the NRC sentiment for tweets
     output$NRC <- renderPlot({
+          
+        nr <- read.csv("nrc.csv")  
         #nrc tweet analysis
         nrc <- dataInput() %>% 
             mutate(text = iconv(text, from = "latin1", to = "ASCII")) %>% 
             mutate(text = tolower(text)) %>% 
             unnest_tokens(word, text) %>% 
             anti_join(stop_words) %>% 
-            inner_join(get_sentiments("nrc")) %>% 
+            inner_join(nr) %>% 
             group_by(sentiment) %>% 
-            count(sentiment, sort = T)#
-        
+            count(sentiment, sort = T)
+
         ggplot(nrc, aes(reorder(sentiment, n), n, fill = sentiment)) + 
-            geom_bar(stat = "identity", show.legend = F) + coord_flip()
+            geom_bar(stat = "identity", show.legend = F) + coord_flip() +
+            theme_minimal() + labs(x = "Sentiments", y = "n") +
+            theme(axis.title.x = element_text(face ="bold", size = 15),
+                axis.title.y = element_text(face = "bold", size = 15),
+                axis.text = element_text(face = "bold"))
     })
     
+    output$value7 <- renderValueBox({
+      
+      y <- "https://www.worldometers.info/coronavirus/coronavirus-death-toll/"
+      
+      total_change <- read_html(y) %>% 
+        html_node(".table-responsive:nth-child(2) .table-list") %>% 
+        html_table()
+      
+     
+      valueBox(total_change[1,3], subtitle = "Total Deaths Today",
+               icon = icon("stats", lib = "glyphicon"),
+               color = "aqua")
+    })
+    output$value8 <- renderValueBox({
+      
+      y <- "https://www.worldometers.info/coronavirus/coronavirus-death-toll/"
+      
+      total_change <- read_html(y) %>% 
+        html_node(".table-responsive:nth-child(2) .table-list") %>% 
+        html_table()
+      
+      
+      valueBox(total_change[1,4], subtitle = "Change in Total Deaths",
+               icon = icon("stats", lib = "glyphicon"),
+               color = "maroon")
     
-    }
+      
+    })
+    output$value9 <- renderValueBox({
+      
+      #Number of critical Cases
+      z <-  "https://www.worldometers.info/coronavirus/coronavirus-cases/#daily-cases"
+      
+      critical <-read_html(z) %>% 
+        html_node("tr:nth-child(6) .number-table") %>% 
+        html_text()
+      
+      valueBox(critical, subtitle = "Critical Cases",
+               icon = icon("stats", lib = "glyphicon"),
+               color = "black")
+    })
+}
+
+
 
 # Run the application 
 shinyApp(ui = ui, server = server)
 
 
-setAccountInfo(name='simmie',
-                          token='46571E4B0FDF32F4A7B9A2E0478A71FB',
-                          secret='J5r2LZQw572oW9imfMA9m1Tdz6xU3P0GP2iM5SmC')
 
-deployApp(appName = "NLP_new")
+
+

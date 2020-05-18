@@ -1,0 +1,12 @@
+name: Corona_Dashboard
+title: Corona_Dashboard
+username:
+account: simmie
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2311316
+bundleId: 3158932
+url: https://simmie.shinyapps.io/Corona_Dashboard/
+when: 1589746714.85535
+asMultiple: FALSE
+asStatic: FALSE
