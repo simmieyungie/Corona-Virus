@@ -44,7 +44,8 @@ ui <- dashboardPage(
                     h6(style = "color:#006d2c", selectInput("Input_Hashtag", "Hashtag to search:", c("#corona",
                                                                           "#covid",
                                                                           "#covid19",
-                                                                          "#coronavirus")))
+                                                                          "#coronavirus",
+                                                                          "#CovidKE")))
                      , width = 0.3)
       ),
 
@@ -392,7 +393,7 @@ server <- function(input, output) {
             html_text()
         
        valueBox(paste(global), subtitle = "Total Number of Global Cases", 
-                                 icon = icon("chart-line", lib ="font-awesome" ), color = "light-blue")
+                                 icon = icon("chart-line", lib ="font-awesome" ), color = "red")
     })
     
     #build value box for number of deaths
@@ -405,7 +406,7 @@ server <- function(input, output) {
         html_text()
         valueBox(deaths, subtitle = "Total Number of Deaths",
                                  icon = icon("chart-bar", lib = "font-awesome"),
-                                 color = "black")
+                                 color = "olive")
     })
     
     #Value box for total recoveries world wide
@@ -500,7 +501,7 @@ server <- function(input, output) {
      
       valueBox(total_change[1,3], subtitle = "Total Deaths Today",
                icon = icon("stats", lib = "glyphicon"),
-               color = "aqua")
+               color = "purple")
     })
     output$value8 <- renderValueBox({
       
