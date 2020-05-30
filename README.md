@@ -3,7 +3,7 @@ Create a shiny App on Sentiment Analysis of Corona Virus
 
 
 ## E-Rum 2020 Covid'19 contest Dashboard
-This dashboard was built using Shiny R framework. It was designed to using twitter's API to collect tweets and perform real time sentiment Analysis on the collection. Find the Shiny app hosted [here[(https://simmie.shinyapps.io/Corona_Dashboard/?_ga=2.227603421.1973774054.1590876545-1563876717.1589398630).
+This dashboard was built using Shiny R framework. It was designed to using twitter's API to collect tweets and perform real time sentiment Analysis on the collection. Find the Shiny app hosted [here](https://simmie.shinyapps.io/Corona_Dashboard/?_ga=2.227603421.1973774054.1590876545-1563876717.1589398630).
 
 ## Components
 1. There is a slider that controls how many tweets should be returned. The default amount is 500 and the highest is 18000. It is noteworthy that the higher the tweets, the longer it may take for  the app to load. 
@@ -24,4 +24,8 @@ This dashboard was built using Shiny R framework. It was designed to using twitt
 
 5. The about app page presents a simple description of the page. 
 
-#### The App View
+#### The App Development
+This app was developed solely by me. Pull requests are highly welcomed. 
+### My Pages:
+[LinkedIn](https://www.linkedin.com/in/simileoluwa-kafaru/)
+[Twitter](https://twitter.com/Simmie_kafaru)
