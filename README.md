@@ -27,5 +27,5 @@ This dashboard was built using Shiny R framework. It was designed to using twitt
 #### The App Development
 This app was developed solely by me. Pull requests are highly welcomed. 
 ### My Pages:
-[LinkedIn](https://www.linkedin.com/in/simileoluwa-kafaru/)
-[Twitter](https://twitter.com/Simmie_kafaru)
+- [LinkedIn](https://www.linkedin.com/in/simileoluwa-kafaru/)
+- [Twitter](https://twitter.com/Simmie_kafaru)
